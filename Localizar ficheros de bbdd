@@ -1,0 +1,40 @@
+/***Localizar ficheros de bbdd***/
+
+declare @database nvarchar(200);
+declare @cmd nvarchar(max);
+create table #files_per_database (name nvarchar(200), files nvarchar(max))
+
+DECLARE ficheros CURSOR FOR
+(SELECT name FROM sys.databases);
+
+OPEN ficheros;
+
+-- Perform the first fetch.
+FETCH NEXT FROM ficheros
+into @database;
+
+-- Check @@FETCH_STATUS to see if there are any more rows to fetch.
+WHILE @@FETCH_STATUS = 0
+BEGIN
+   -- This is executed as long as the previous fetch succeeds.
+   set @cmd = 
+/**'USE ['+@database+'];
+SELECT name,physical_name FROM sys.database_files
+'**/
+'USE ['+@database+'];
+
+insert into #files_per_database SELECT name,physical_name FROM sys.database_files
+'
+
+Exec sp_executesql @cmd
+   FETCH NEXT FROM ficheros
+   into @database
+END
+
+
+
+CLOSE ficheros;
+DEALLOCATE ficheros;
+select * from #files_per_database order by files
+drop table #files_per_database
+GO
